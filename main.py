@@ -9,7 +9,8 @@ from Crypto.PublicKey import RSA
 
 private_key_filename = 'p.key'
 public_key_filename = 'p.pub'
-outfile = 'file.res'
+decrypted_filename = 'decrypted file'
+encrypted_filename = 'encrypted file'
 pool = None
 
 
@@ -21,22 +22,34 @@ def main():
         if inp == '1':
             encrypt_plaintext()
         elif inp == '2':
-            try:
-                decrypt_plaintext()
-            except Exception as e:
-                print(e)
+            decrypt_plaintext_safe()
         elif inp == '3':
-            try:
-                encrypt_file()
-            except Exception as e:
-                print(e)
+            encrypt_file_safe()
         elif inp == '4':
-            try:
-                decrypt_file()
-            except Exception as e:
-                print(e)
+            decrypt_file_safe()
         elif inp == 'q':
             break
+
+
+def decrypt_plaintext_safe():
+    try:
+        decrypt_plaintext()
+    except Exception as e:
+        print(e)
+
+
+def encrypt_file_safe():
+    try:
+        encrypt_file()
+    except Exception as e:
+        print(e)
+
+
+def decrypt_file_safe():
+    try:
+        decrypt_file()
+    except Exception as e:
+        print(e)
 
 
 def encrypt_plaintext():
@@ -62,26 +75,22 @@ def encrypt_file():
     with open(filename, 'rb') as f:
         file_read = f.read(block)
         while file_read:
-            encrypted_list.append(encrypt_byte(file_read).decode('UTF-8'))
+            encrypted_list.append(encrypt_byte(file_read))
             file_read = f.read(block)
-    encrypted_message = ','.join(encrypted_list)
-    print(encrypted_message)
-    clipboard.copy(encrypted_message)
-    print('Copied to clipboard.')
+    encrypted_message = b','.join(encrypted_list)
+    write_binary(encrypted_filename, encrypted_message)
+    print(f'Exported to `{encrypted_filename}`.')
 
 
 def decrypt_file():
-    encrypted = input('Decrypt (enter to use from clipboard): ')
-    if not encrypted:
-        encrypted = clipboard.paste()
-    encrypted_list = encrypted.split(',')
+    encrypted = read_binary(encrypted_filename)
+    encrypted_list = encrypted.split(b',')
     private_key = read_binary(private_key_filename)
     iterable = list(map(lambda x: (x, private_key), encrypted_list))
     mapped = get_pool().map(func=decrypt_runner, iterable=iterable)
     decrypted = b''.join(mapped)
-    with open(outfile, 'wb') as f:
-        f.write(decrypted)
-    print(f'Exported to `{outfile}`.')
+    write_binary(decrypted_filename, decrypted)
+    print(f'Exported to `{decrypted_filename}`.')
 
 
 def encrypt_byte(input_byte):
@@ -111,20 +120,23 @@ def obtain_private_key():
     return private_key
 
 
+def create_keys():
+    key = RSA.generate(4096)
+    private_key = key.export_key('PEM')
+    write_binary(private_key_filename, private_key)
+    public_key = key.publickey().exportKey('PEM')
+    write_binary(public_key_filename, public_key)
+
+
 def read_binary(filename):
     with open(filename, 'rb') as f:
         read = f.read()
     return read
 
 
-def create_keys():
-    key = RSA.generate(4096)
-    private_key = key.export_key('PEM')
-    with open(private_key_filename, 'wb') as f:
-        f.write(private_key)
-    public_key = key.publickey().exportKey('PEM')
-    with open(public_key_filename, 'wb') as f:
-        f.write(public_key)
+def write_binary(filename, payload):
+    with open(filename, 'wb') as f:
+        f.write(payload)
 
 
 def get_pool():
