@@ -9,7 +9,6 @@ from Crypto.PublicKey import RSA
 
 private_key_filename = 'p.key'
 public_key_filename = 'p.pub'
-decrypted_filename = 'decrypted file'
 encrypted_filename = 'encrypted file'
 pool = None
 
@@ -20,34 +19,20 @@ def main():
     while True:
         inp = input("1: encrypt, 2: decrypt, 3: encrypt file, 4: decrypt file, q: quit: ")
         if inp == '1':
-            encrypt_plaintext()
+            run_safe(encrypt_plaintext)
         elif inp == '2':
-            decrypt_plaintext_safe()
+            run_safe(decrypt_plaintext)
         elif inp == '3':
-            encrypt_file_safe()
+            run_safe(encrypt_file)
         elif inp == '4':
-            decrypt_file_safe()
+            run_safe(decrypt_file)
         elif inp == 'q':
             break
 
 
-def decrypt_plaintext_safe():
+def run_safe(runner):
     try:
-        decrypt_plaintext()
-    except Exception as e:
-        print(e)
-
-
-def encrypt_file_safe():
-    try:
-        encrypt_file()
-    except Exception as e:
-        print(e)
-
-
-def decrypt_file_safe():
-    try:
-        decrypt_file()
+        runner()
     except Exception as e:
         print(e)
 
@@ -70,7 +55,7 @@ def decrypt_plaintext():
 
 def encrypt_file():
     filename = input('Filename: ')
-    encrypted_list = []
+    encrypted_list = [encrypt_byte(filename.encode('UTF-8'))]
     block = 470
     with open(filename, 'rb') as f:
         file_read = f.read(block)
@@ -85,6 +70,7 @@ def encrypt_file():
 def decrypt_file():
     encrypted = read_binary(encrypted_filename)
     encrypted_list = encrypted.split(b',')
+    decrypted_filename = decrypt_byte(encrypted_list.pop(0)).decode('UTF-8')
     private_key = read_binary(private_key_filename)
     iterable = list(map(lambda x: (x, private_key), encrypted_list))
     mapped = get_pool().map(func=decrypt_runner, iterable=iterable)
@@ -123,8 +109,8 @@ def obtain_private_key():
 def create_keys():
     key = RSA.generate(4096)
     private_key = key.export_key('PEM')
-    write_binary(private_key_filename, private_key)
     public_key = key.publickey().exportKey('PEM')
+    write_binary(private_key_filename, private_key)
     write_binary(public_key_filename, public_key)
 
 
