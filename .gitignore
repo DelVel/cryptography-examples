@@ -281,3 +281,4 @@ lists.db
 /*.pem
 /temp/
 /config.ini
+*.pub
